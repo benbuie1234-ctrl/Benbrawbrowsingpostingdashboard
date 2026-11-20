@@ -18,12 +18,9 @@
   main { display: grid; grid-template-rows: auto minmax(0, 1fr); min-width: 0; }
   header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .6rem 1rem; padding: .9rem 1.2rem; border-bottom: 1px solid #30313d; }
   h1 { margin: 0; font-size: 1.15rem; }
-  .actions { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
-  .actions button, a { padding: .5rem .75rem; font-size: .875rem; }
   a { display: inline-block; background: #c8bcff; color: #18112d; font-weight: 700; text-decoration: none; }
   a:hover { background: #ded6ff; }
   section { position: relative; min-height: 60vh; }
-  iframe { display: block; width: 100%; height: 100%; border: 0; background: #17181f; }
   .fallback { max-width: 28rem; margin: 12vh auto 0; padding: 1rem; text-align: center; }
   .fallback p { color: #d2d3de; line-height: 1.5; }
   @media (max-width: 650px) {
@@ -41,12 +38,13 @@
 <main>
   <header>
     <h1></h1>
-    <div class="actions">
-      <button id="toggle" type="button" aria-controls="workspace"></button>
-      <a id="external" target="_blank" rel="noopener noreferrer">Open in browser</a>
-    </div>
   </header>
-  <section id="workspace" role="tabpanel"></section>
+  <section id="workspace" role="tabpanel">
+    <div class="fallback">
+      <a id="external" target="_blank" rel="noopener noreferrer"></a>
+      <p>Opens in a new browser tab.</p>
+    </div>
+  </section>
 </main>
 <script>
   const platforms = [
@@ -59,35 +57,9 @@
   const tablist = document.querySelector('[role="tablist"]');
   const workspace = document.querySelector('#workspace');
   const external = document.querySelector('#external');
-  const toggle = document.querySelector('#toggle');
   const heading = document.querySelector('h1');
   const mobile = matchMedia('(max-width: 650px)');
-  const externalOnly = new Set();
   let selected;
-
-  function renderWorkspace() {
-    const platform = platforms[selected];
-    const useExternal = externalOnly.has(selected);
-    toggle.textContent = useExternal ? 'Try inline view' : 'Inline view blocked?';
-    if (useExternal) {
-      const fallback = document.createElement('div');
-      fallback.className = 'fallback';
-      const message = document.createElement('p');
-      message.textContent = 'Open the dashboard in its own browser tab to continue.';
-      const link = external.cloneNode(true);
-      link.removeAttribute('id');
-      link.textContent = 'Open ' + platform.name;
-      fallback.append(message, link);
-      workspace.replaceChildren(fallback);
-      return;
-    }
-
-    const frame = document.createElement('iframe');
-    frame.title = platform.title;
-    frame.src = platform.url;
-    frame.referrerPolicy = 'no-referrer';
-    workspace.replaceChildren(frame);
-  }
 
   function select(index) {
     if (selected === index) return;
@@ -99,9 +71,9 @@
     }
     heading.textContent = platform.title;
     external.href = platform.url;
+    external.textContent = "Open " + platform.title;
     workspace.setAttribute('aria-labelledby', tabs[index].id);
     try { localStorage.setItem('benbraw-platform', platform.name); } catch {}
-    renderWorkspace();
   }
 
   const tabs = platforms.map((platform, index) => {
@@ -135,12 +107,6 @@
     event.preventDefault();
     select(positions[event.key]);
     tabs[selected].focus();
-  });
-
-  toggle.addEventListener('click', () => {
-    if (externalOnly.has(selected)) externalOnly.delete(selected);
-    else externalOnly.add(selected);
-    renderWorkspace();
   });
 
   let remembered;
