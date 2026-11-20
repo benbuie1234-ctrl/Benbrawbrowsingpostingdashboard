@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ben B Raw · Posting Dashboard</title>
+<style>
+  :root { color-scheme: dark; font: 16px system-ui, sans-serif; background: #101116; color: #f2f2f6; }
+  * { box-sizing: border-box; }
+  body { margin: 0; display: grid; grid-template-columns: 14rem minmax(0, 1fr); min-height: 100dvh; }
+  aside { background: #17181f; border-right: 1px solid #30313d; padding: 1.25rem; }
+  .brand { font-size: 1.25rem; font-weight: 800; margin: .35rem 0 1.65rem; }
+  [role="tablist"] { display: grid; gap: .4rem; }
+  button, a { font: inherit; border-radius: .5rem; }
+  button { color: #d2d3de; background: transparent; border: 1px solid transparent; cursor: pointer; padding: .7rem .8rem; text-align: left; }
+  button:hover { background: #242630; }
+  [aria-selected="true"] { background: #2b2941; border-color: #585079; color: #fff; font-weight: 650; }
+  :focus-visible { outline: 2px solid #c0b5ff; outline-offset: 2px; }
+  main { display: grid; grid-template-rows: auto minmax(0, 1fr); min-width: 0; }
+  header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: .6rem 1rem; padding: .9rem 1.2rem; border-bottom: 1px solid #30313d; }
+  h1 { margin: 0; font-size: 1.15rem; }
+  .actions { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+  .actions button, a { padding: .5rem .75rem; font-size: .875rem; }
+  a { display: inline-block; background: #c8bcff; color: #18112d; font-weight: 700; text-decoration: none; }
+  a:hover { background: #ded6ff; }
+  section { position: relative; min-height: 60vh; }
+  iframe { display: block; width: 100%; height: 100%; border: 0; background: #17181f; }
+  .fallback { max-width: 28rem; margin: 12vh auto 0; padding: 1rem; text-align: center; }
+  .fallback p { color: #d2d3de; line-height: 1.5; }
+  @media (max-width: 650px) {
+    body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
+    aside { border-right: 0; border-bottom: 1px solid #30313d; padding: .8rem; }
+    .brand { margin: 0 0 .6rem; }
+    [role="tablist"] { display: flex; flex-wrap: wrap; }
+    [role="tab"] { padding: .5rem; font-size: .875rem; }
+  }
+</style>
+<aside>
+  <div class="brand">Ben B Raw</div>
+  <div role="tablist" aria-label="Posting platforms" aria-orientation="vertical"></div>
+</aside>
+<main>
+  <header>
+    <h1></h1>
+    <div class="actions">
+      <button id="toggle" type="button" aria-controls="workspace"></button>
+      <a id="external" target="_blank" rel="noopener noreferrer">Open in browser</a>
+    </div>
+  </header>
+  <section id="workspace" role="tabpanel"></section>
+</main>
+<script>
+  const platforms = [
+    { name: 'TikTok', title: 'TikTok Studio', url: 'https://www.tiktok.com/tiktokstudio' },
+    { name: 'Snapchat', title: 'Snapchat Public Stories', url: 'https://profile.snapchat.com/9a084a06-f2ea-431c-91dd-2a26917e05b9/profiles/e8f70f74-7fe3-4ecf-9b76-0b2d13cb518f/details/public-stories' },
+    { name: 'Instagram', title: 'Instagram', url: 'https://www.instagram.com/benbraw/' },
+    { name: 'YouTube', title: 'YouTube Studio', url: 'https://studio.youtube.com/channel/UCJXajj7x9t_wTBFj2hg1vIg/videos/upload?filter=%5B%5D&sort=%7B%22columnType%22%3A%22date%22%2C%22sortOrder%22%3A%22DESCENDING%22%7D' }
+  ];
+
+  const tablist = document.querySelector('[role="tablist"]');
+  const workspace = document.querySelector('#workspace');
+  const external = document.querySelector('#external');
+  const toggle = document.querySelector('#toggle');
+  const heading = document.querySelector('h1');
+  const mobile = matchMedia('(max-width: 650px)');
+  const externalOnly = new Set();
+  let selected;
+
+  function renderWorkspace() {
+    const platform = platforms[selected];
+    const useExternal = externalOnly.has(selected);
+    toggle.textContent = useExternal ? 'Try inline view' : 'Inline view blocked?';
+    if (useExternal) {
+      const fallback = document.createElement('div');
+      fallback.className = 'fallback';
+      const message = document.createElement('p');
+      message.textContent = 'Open the dashboard in its own browser tab to continue.';
+      const link = external.cloneNode(true);
+      link.removeAttribute('id');
+      link.textContent = 'Open ' + platform.name;
+      fallback.append(message, link);
+      workspace.replaceChildren(fallback);
+      return;
+    }
+
+    const frame = document.createElement('iframe');
+    frame.title = platform.title;
+    frame.src = platform.url;
+    frame.referrerPolicy = 'no-referrer';
+    workspace.replaceChildren(frame);
+  }
+
+  function select(index) {
+    if (selected === index) return;
+    selected = index;
+    const platform = platforms[index];
+    for (const [position, tab] of tabs.entries()) {
+      tab.setAttribute('aria-selected', position === index);
+      tab.tabIndex = position === index ? 0 : -1;
+    }
+    heading.textContent = platform.title;
+    external.href = platform.url;
+    workspace.setAttribute('aria-labelledby', tabs[index].id);
+    try { localStorage.setItem('benbraw-platform', platform.name); } catch {}
+    renderWorkspace();
+  }
+
+  const tabs = platforms.map((platform, index) => {
+    const tab = document.createElement('button');
+    tab.type = 'button';
+    tab.id = 'platform-' + platform.name.toLowerCase();
+    tab.setAttribute('role', 'tab');
+    tab.setAttribute('aria-controls', workspace.id);
+    tab.textContent = platform.name;
+    tab.addEventListener('click', () => select(index));
+    tablist.append(tab);
+    return tab;
+  });
+
+  function updateOrientation() {
+    tablist.setAttribute('aria-orientation', mobile.matches ? 'horizontal' : 'vertical');
+  }
+
+  updateOrientation();
+  mobile.addEventListener('change', updateOrientation);
+  tablist.addEventListener('keydown', event => {
+    const nextKey = mobile.matches ? 'ArrowRight' : 'ArrowDown';
+    const previousKey = mobile.matches ? 'ArrowLeft' : 'ArrowUp';
+    const positions = {
+      [nextKey]: (selected + 1) % tabs.length,
+      [previousKey]: (selected + tabs.length - 1) % tabs.length,
+      Home: 0,
+      End: tabs.length - 1
+    };
+    if (!Object.hasOwn(positions, event.key)) return;
+    event.preventDefault();
+    select(positions[event.key]);
+    tabs[selected].focus();
+  });
+
+  toggle.addEventListener('click', () => {
+    if (externalOnly.has(selected)) externalOnly.delete(selected);
+    else externalOnly.add(selected);
+    renderWorkspace();
+  });
+
+  let remembered;
+  try { remembered = localStorage.getItem('benbraw-platform'); } catch {}
+  select(Math.max(0, platforms.findIndex(platform => platform.name === remembered)));
+</script>
+</html>
